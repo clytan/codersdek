@@ -91,31 +91,6 @@ document.querySelectorAll('.reveal').forEach(el => {
   revealObserver.observe(el);
 });
 
-/* ── WORK FILTERS ── */
-const filters = document.querySelectorAll('.filter');
-const works   = document.querySelectorAll('.work');
-
-filters.forEach(btn => {
-  btn.addEventListener('click', () => {
-    filters.forEach(b => {
-      const active = b === btn;
-      b.classList.toggle('is-active', active);
-      b.setAttribute('aria-pressed', String(active));
-    });
-    const filter = btn.dataset.filter;
-    works.forEach(card => {
-      const match = filter === 'all' || card.dataset.category.split(' ').includes(filter);
-      card.classList.toggle('is-hidden', !match);
-      card.classList.remove('is-entering');
-      if (match) {
-        card.classList.add('is-in');
-        void card.offsetWidth; // restart animation
-        card.classList.add('is-entering');
-      }
-    });
-  });
-});
-
 /* ── SCROLL SPY ── */
 const navAnchors = [...navLinks.querySelectorAll('a[href^="#"]:not(.nav-links-cta)')];
 const spyObserver = new IntersectionObserver(entries => {
