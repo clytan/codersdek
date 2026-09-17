@@ -4,11 +4,9 @@
 
 const CONTACT_EMAIL = 'codersdek@gmail.com';
 const reduceMotion  = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const phone         = window.matchMedia('(max-width: 680px)');
 
 document.documentElement.classList.add('js');
-window.addEventListener('load', () => document.documentElement.classList.add('is-loaded'));
-// Don't hold the hero hostage to slow fonts/images
-setTimeout(() => document.documentElement.classList.add('is-loaded'), 900);
 
 /* ── NAV: scrolled state ── */
 const nav = document.getElementById('nav');
@@ -108,13 +106,112 @@ if (steps) {
   const updateSteps = () => {
     const r = steps.getBoundingClientRect();
     const vh = window.innerHeight;
-    const p = Math.max(0, Math.min(1, (vh * 0.8 - r.top) / (vh * 0.55)));
+    const p = phone.matches
+      ? Math.max(0, Math.min(1, (vh * 0.6 - r.top) / r.height))        // vertical timeline
+      : Math.max(0, Math.min(1, (vh * 0.8 - r.top) / (vh * 0.55)));    // horizontal line
     steps.style.setProperty('--progress', p);
     stepEls.forEach((s, i) => s.classList.toggle('is-done', p >= i / (stepEls.length - 1) - 0.001));
   };
   window.addEventListener('scroll', updateSteps, { passive: true });
   window.addEventListener('resize', updateSteps);
   updateSteps();
+}
+
+/* ═══ MOBILE COMPONENTS ═══ */
+
+/* Services accordion (phones) */
+const svcs = [...document.querySelectorAll('.svc')];
+function setSvc(target) {
+  svcs.forEach(s => {
+    const open = s === target && !s.classList.contains('is-open');
+    s.classList.toggle('is-open', open);
+    if (phone.matches) s.setAttribute('aria-expanded', String(open));
+  });
+}
+function syncSvcA11y() {
+  svcs.forEach(s => {
+    if (phone.matches) {
+      s.setAttribute('role', 'button');
+      s.setAttribute('tabindex', '0');
+      s.setAttribute('aria-expanded', String(s.classList.contains('is-open')));
+    } else {
+      ['role', 'tabindex', 'aria-expanded'].forEach(a => s.removeAttribute(a));
+    }
+  });
+}
+svcs.forEach(s => {
+  s.addEventListener('click', () => { if (phone.matches) setSvc(s); });
+  s.addEventListener('keydown', e => {
+    if (phone.matches && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setSvc(s); }
+  });
+});
+if (svcs[0]) svcs[0].classList.add('is-open');
+syncSvcA11y();
+phone.addEventListener('change', syncSvcA11y);
+
+/* Tech stack tabs (phones) */
+const stack = document.querySelector('.stack');
+if (stack) {
+  const rows = [...stack.querySelectorAll('.stack-row')];
+  const tabs = document.createElement('div');
+  tabs.className = 'stack-tabs';
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', 'Technology categories');
+  const selectTab = i => {
+    rows.forEach((r, k) => r.classList.toggle('is-active', k === i));
+    [...tabs.children].forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
+    tabs.children[i].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+  rows.forEach((row, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'stack-tab';
+    b.setAttribute('role', 'tab');
+    b.textContent = row.querySelector('h3').textContent;
+    b.addEventListener('click', () => selectTab(i));
+    tabs.appendChild(b);
+  });
+  stack.before(tabs);
+  rows.forEach((r, k) => r.classList.toggle('is-active', k === 0));
+  [...tabs.children].forEach((b, k) => b.setAttribute('aria-selected', String(k === 0)));
+}
+
+/* Testimonial carousel dots (phones) */
+const quotes = document.querySelector('.quotes');
+if (quotes) {
+  const cards = [...quotes.children];
+  const dots = document.createElement('div');
+  dots.className = 'quote-dots';
+  cards.forEach((card, i) => {
+    const d = document.createElement('button');
+    d.type = 'button';
+    d.setAttribute('aria-label', `Show testimonial ${i + 1}`);
+    d.addEventListener('click', () => quotes.scrollTo({ left: card.offsetLeft - quotes.offsetLeft - parseFloat(getComputedStyle(quotes).paddingLeft), behavior: reduceMotion ? 'auto' : 'smooth' }));
+    dots.appendChild(d);
+  });
+  quotes.after(dots);
+  const syncDots = () => {
+    const mid = quotes.scrollLeft + quotes.clientWidth / 2;
+    let active = 0;
+    cards.forEach((c, i) => { if (c.offsetLeft - quotes.offsetLeft <= mid) active = i; });
+    [...dots.children].forEach((d, i) => d.setAttribute('aria-current', String(i === active)));
+  };
+  quotes.addEventListener('scroll', syncDots, { passive: true });
+  syncDots();
+}
+
+/* Quick-contact bar (phones): show after the hero, hide at the contact section */
+const mbar = document.getElementById('mbar');
+const contactSection = document.getElementById('contact');
+if (mbar && contactSection) {
+  const syncBar = () => {
+    const pastHero = window.scrollY > window.innerHeight * 0.7;
+    const atContact = contactSection.getBoundingClientRect().top < window.innerHeight * 0.85;
+    mbar.classList.toggle('is-shown', phone.matches && pastHero && !atContact);
+  };
+  window.addEventListener('scroll', syncBar, { passive: true });
+  window.addEventListener('resize', syncBar);
+  syncBar();
 }
 
 /* ── TOAST ── */
